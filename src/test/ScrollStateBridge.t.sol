@@ -11,7 +11,7 @@ import {StdCheats} from "forge-std/StdCheats.sol";
 /// @title State Bridge Test
 /// @author Worldcoin
 /// @notice A test contract for StateBridge.sol
-contract OpStateBridgeTest is PRBTest, StdCheats {
+contract ScrollStateBridgeTest is PRBTest, StdCheats {
     ///////////////////////////////////////////////////////////////////
     ///                        STORAGE CONFIG                       ///
     ///////////////////////////////////////////////////////////////////
@@ -57,7 +57,7 @@ contract OpStateBridgeTest is PRBTest, StdCheats {
     /// @param previousOwner The previous owner of the OPWorldID contract
     /// @param newOwner The new owner of the OPWorldID contract
     /// @param isLocal Whether the ownership transfer is local (Optimism/OP Stack chain EOA/contract) or an Ethereum EOA or contract
-    event OwnershipTransferredSc(
+    event OwnershipTransferredScroll(
         address indexed previousOwner, address indexed newOwner, bool isLocal
     );
 
@@ -75,7 +75,7 @@ contract OpStateBridgeTest is PRBTest, StdCheats {
 
     /// @notice Emitted when the the StateBridge sets the gas limit for transferOwnershipOp
     /// @param _opGasLimit The new opGasLimit for transferOwnershipOptimism
-    event SetGasLimitTransferOwnershipOp(uint32 _opGasLimit);
+    event SetGasLimitTransferOwnershipScroll(uint32 _opGasLimit);
 
     ///////////////////////////////////////////////////////////////////
     ///                            ERRORS                           ///
@@ -171,7 +171,7 @@ contract OpStateBridgeTest is PRBTest, StdCheats {
         vm.expectEmit(true, true, true, true);
 
         // CrossDomainOwnable3.sol transferOwnership event
-        emit OwnershipTransferredSc(owner, newOwner, isLocal);
+        emit OwnershipTransferredScroll(owner, newOwner, isLocal);
 
         vm.prank(owner);
         scStateBridge.transferOwnershipScroll(newOwner, isLocal);
@@ -215,12 +215,12 @@ contract OpStateBridgeTest is PRBTest, StdCheats {
 
     /// @notice tests whether the StateBridge contract can set the opGasLimit for transferOwnershipOptimism
     /// @param _opGasLimit The new opGasLimit for transferOwnershipOptimism
-    function test_owner_setGasLimitTransferOwnershipOp_succeeds(uint32 _opGasLimit) public {
+    function test_owner_setGasLimitTransferOwnershipSc_succeeds(uint32 _opGasLimit) public {
         vm.assume(_opGasLimit != 0);
 
         vm.expectEmit(true, true, true, true);
 
-        emit SetGasLimitTransferOwnershipOp(_opGasLimit);
+        emit SetGasLimitTransferOwnershipScroll(_opGasLimit);
 
         vm.prank(owner);
         scStateBridge.setGasLimitTransferOwnershipScroll(_opGasLimit);

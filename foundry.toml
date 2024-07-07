@@ -98,3 +98,9 @@ gas_reports = [
 # costs.
 fs_permissions = [{ access = "read", path = "./"}]
 optimizer_runs = 20000
+
+[rpc_endpoints]
+scrollSepolia = "${SCROLL_TESTNET_RPC_URL}"
+
+[etherscan]
+scrollSepolia = { key = "${SCROLL_ETHERSCAN_API_KEY}" }

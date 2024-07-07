@@ -9,7 +9,7 @@ import {ScrollStateBridge} from "src/ScrollStateBridge.sol";
 /// @notice forge script to deploy StateBridge.sol on Scroll
 /// @author Worldcoin
 /// @dev Can be executed by running `make mock`, `make local-mock`, `make deploy` or `make deploy-testnet`.
-contract DeployScrollStateBridgeGoerli is Script {
+contract DeployScrollStateBridgeSepolia is Script {
     ScrollStateBridge public bridge;
     address public scrollL1MessengerAddress;
 

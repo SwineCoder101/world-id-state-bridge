@@ -6,12 +6,12 @@ import ora from "ora";
 import { Command } from "commander";
 import { execSync } from "child_process";
 import { Network, Alchemy, Utils } from "alchemy-sdk";
-import { ethers } from "ethers";
+import { ethers, JsonRpcProvider } from "ethers";
 
 // === Constants ==================================================================================
 
-const DEFAULT_RPC_URL = "http://localhost:8545";
-const PLACEHOLDER_ETHERSCAN_API_KEY = "AAAAAAAAAAAAAAAAAA";
+const DEFAULT_RPC_URL = dotenv.config().parsed.DEFAULT_RPC_URL;
+const PLACEHOLDER_ETHERSCAN_API_KEY = dotenv.config().parsed.ETHERSCAN_API_KEY;
 const CONFIG_FILENAME = "src/script/.deploy-config.json";
 
 // === Implementation =============================================================================
@@ -135,6 +135,15 @@ async function getEthereumEtherscanApiKey(config) {
 async function getTreeDepth(config) {
   if (!config.treeDepth) {
     config.treeDepth = await ask("Enter WorldID tree depth: ");
+  }
+}
+
+async function getScrollStateBridgeAddress(config) {
+  if (!config.scrollStateBridgeAddress) {
+    config.scrollStateBridgeAddress = process.env.SCROLL_STATE_BRIDGE_ADDRESS;
+  }
+  if (!config.scrollStateBridgeAddress) {
+    config.scrollStateBridgeAddress = await ask("Enter Scroll World ID Address: ");
   }
 }
 
@@ -282,17 +291,41 @@ async function saveConfiguration(config) {
 async function deployScrollWorldID(config) {
   const spinner = ora("Deploying ScrollWorldID on Scroll...").start();
 
+
+  // get user balance with ethers
+  console.log("config: ",config);
+  const provider = new JsonRpcProvider(config.scrollRpcUrl);
+  let balance = await provider.getBalance("0xd1D1B8F0B6740fad9Fb4166EeEEFEDDB84770938");
+  console.log(`Deployer balance: ${balance}`);
+
+  let contractAddress;
   try {
+
+    if (!process.env.SCROLL_SEPOLIA_WORLD_ID_ADDRESS){
+
+    
     const data = execSync(
-      `forge script src/script/deploy/scroll/DeployScrollWorldID.s.sol:DeployScrollWorldID --fork-url ${config.scrollRpcUrl} \
-      --etherscan-api-key ${config.scrollEtherscanApiKey} --broadcast --verify -vvvv`,
+      `forge create src/ScrollWorldID.sol:ScrollWorldID --rpc-url ${config.scrollRpcUrl} \
+      --private-key ${process.env.PRIVATE_KEY} --constructor-args 30 --etherscan-api-key ${config.scrollEtherscanApiKey} --verify`,
     );
+
     console.log(data.toString());
+    contractAddress = data.toString().match(/0x[a-fA-F0-9]{40}/)[0];
+    console.log(`Scroll World ID Contract address: ${contractAddress}`);
+    spinner.succeed("DeployScrollWorldID.s.sol ran successfully!");
+  } else {
+    contractAddress = process.env.SCROLL_SEPOLIA_WORLD_ID_ADDRESS;
+    console.log("using existing contract address for ScrollWorldID", process.env.SCROLL_SEPOLIA_WORLD_ID_ADDRESS);
+  }
   } catch (err) {
     console.error(err);
+    spinner.fail("DeployScrollWorldID.s.sol failed!");
   }
 
-  spinner.succeed("DeployScrollWorldID.s.sol ran successfully!");
+  config.scrollWorldIDAddress = contractAddress;
+
+  //set SCROLL_WORLD_ID env variable
+  process.env.SCROLL_WORLD_ID=contractAddress;
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -304,7 +337,7 @@ async function localTransferOwnershipOfScrollWorldIDToStateBridge(config) {
 
   try {
     const data = execSync(
-      `forge script src/script/initialize/scroll/LocalTransferOwnershipOfScrollWorldID.s.sol:LocalTransferOwnershipOfScrollWorldID --fork-url ${config.scrollRpcUrl} \
+      `forge script src/script/ownership/scroll/LocalTransferOwnershipOfScrollWorldID.s.sol:LocalTransferOwnershipOfScrollWorldID --fork-url ${config.scrollRpcUrl} \
       --broadcast -vvvv`,
     );
     console.log(data.toString());
@@ -354,51 +387,76 @@ async function setGasLimitScrollStateBridge(config) {
 ///                     SCRIPT ORCHESTRATION                    ///
 ///////////////////////////////////////////////////////////////////
 
-async function deploymentMainnet(config) {
-  dotenv.config();
+// async function deploymentMainnet(config) {
+// dotenv.config();
 
-  await getPrivateKey(config);
-  await getEthereumRpcUrl(config);
-  await getScrollRpcUrl(config);
-  await getEthereumEtherscanApiKey(config);
-  await getScrollEtherscanApiKey(config);
-  await getTreeDepth(config);
-  await saveConfiguration(config);
-  await deployScrollWorldID(config);
-  await getWorldIDIdentityManagerAddress(config);
-  await getScrollWorldIDAddress(config);
-  await saveConfiguration(config);
-  await deployScrollStateBridgeMainnet(config);
-  await getOptimismStateBridgeAddress(config);
-  await getBaseStateBridgeAddress(config);
-  await getPolygonStateBridgeAddress(config);
-  await saveConfiguration(config);
-  await initializePolygonWorldID(config);
-  await localTransferOwnershipOfOpWorldIDToStateBridge(config);
-  await localTransferOwnershipOfBaseWorldIDToStateBridge(config);
-}
+// await getPrivateKey(config);
+//   await getEthereumRpcUrl(config);
+//   await getScrollRpcUrl(config);
+//   await getEthereumEtherscanApiKey(config);
+//   await getScrollEtherscanApiKey(config);
+//   await saveConfiguration(config);
+//   await deployScrollWorldID(config);
+//   await getWorldIDIdentityManagerAddress(config);
+//   await getScrollWorldIDAddress(config);
+//   await saveConfiguration(config);
+//   await deployScrollStateBridgeMainnet(config);
+//   await getOptimismStateBridgeAddress(config);
+//   await getBaseStateBridgeAddress(config);
+//   await getPolygonStateBridgeAddress(config);
+//   await saveConfiguration(config);
+//   await initializePolygonWorldID(config);
+//   await localTransferOwnershipOfOpWorldIDToStateBridge(config);
+//   await localTransferOwnershipOfBaseWorldIDToStateBridge(config);
+// }
 
 async function deploymentTestnet(config) {
   dotenv.config();
 
   await getPrivateKey(config);
   await getEthereumRpcUrl(config);
-  await getOptimismRpcUrl(config);
-  await getBaseRpcUrl(config);
-  await getPolygonRpcUrl(config);
-  await getBaseEtherscanApiKey(config);
-  await getTreeDepth(config);
+  await getScrollRpcUrl(config);
+  await getScrollEtherscanAPIKey(config);
   await saveConfiguration(config);
-  await deployOptimismWorldID(config);
-  await deployBaseWorldID(config);
-  await deployPolygonWorldIDMumbai(config);
+  await deployScrollWorldID(config);
   await getWorldIDIdentityManagerAddress(config);
-  await getBaseWorldIDAddress(config);
+  await getScrollWorldIDAddress(config);
   await saveConfiguration(config);
-  await deployScrollOpStateBridgeGoerli(config);
+  await deployScrollStateBridgeSepolia(config);
   await getScrollStateBridgeAddress(config);
   await saveConfiguration(config);
   await localTransferOwnershipOfScrollWorldIDToStateBridge(config);
+}
+
+async function deployScrollStateBridgeSepolia(config) {
+  const spinner = ora("Deploying ScrollStateBridge on Scroll...").start();
+
+  try {
+    if (!process.env.SCROLL_STATE_BRIDGE_ADDRESS) {
+    const data = execSync(`forge create src/ScrollStateBridge.sol:ScrollStateBridge --rpc-url ${config.scrollRpcUrl} \
+      --private-key ${config.privateKey} \
+      --constructor-args ${process.env.WORLD_ID_IDENTITY_MANAGER_ADDRESS} ${config.scrollWorldIDAddress} ${process.env.SCROLL_L1_MESSENGER_ADDRESS} \
+      --etherscan-api-key ${config.scrollEtherscanApiKey} --verify`);
+
+    console.log(data.toString());
+    config.scrollStateBridgeAddress = data.toString().match(/0x[a-fA-F0-9]{40}/)[0];
+    
+  } else {
+    config.scrollStateBridgeAddress = process.env.SCROLL_STATE_BRIDGE_ADDRESS;
+    console.log("using existing contract address for ScrollStateBridge", process.env.SCROLL_STATE_BRIDGE_ADDRESS);
+  }
+  } catch (err) {
+    console.error(err);
+  }
+
+  spinner.succeed("DeployScrollStateBridge.s.sol ran successfully!");
+
+}
+
+async function getScrollEtherscanAPIKey(config) {
+  if (!config.scrollEtherscanApiKey) {
+    config.scrollEtherscanApiKey = process.env.SCROLL_ETHERSCAN_API_KEY;
+}
 }
 
 async function mockDeployment(config) {
@@ -410,7 +468,7 @@ async function mockDeployment(config) {
   await getBaseRpcUrl(config);
   await getPolygonRpcUrl(config);
   await getEthereumEtherscanApiKey(config);
-  await getOptimismEtherscanApiKey(config);
+  await getScrollEtherscanApiKey(config);
   await getBaseEtherscanApiKey(config);
   await getPolygonscanApiKey(config);
   await getTreeDepth(config);
@@ -462,16 +520,16 @@ async function setOpGasLimit(config) {
 
   await getPrivateKey(config);
   await getEthereumRpcUrl(config);
-  await getOptimismStateBridgeAddress(config);
+  // await getOptimismStateBridgeAddress(config);
   await getBaseStateBridgeAddress(config);
-  await getGasLimitSendRootOptimism(config);
-  await getGasLimitSetRootHistoryExpiryOptimism(config);
-  await getGasLimitTransferOwnershipOptimism(config);
+  // await getGasLimitSendRootOptimism(config);
+  // await getGasLimitSetRootHistoryExpiryOptimism(config);
+  // await getGasLimitTransferOwnershipOptimism(config);
   await getGasLimitSendRootBase(config);
   await getGasLimitSetRootHistoryExpiryBase(config);
   await getGasLimitTransferOwnershipBase(config);
   await saveConfiguration(config);
-  await setGasLimitOptimismStateBridge(config);
+  // await setGasLimitOptimismStateBridge(config);
   await setGasLimitBaseStateBridge(config);
 }
 

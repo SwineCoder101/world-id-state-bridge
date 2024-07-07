@@ -9,7 +9,7 @@ import {IScrollCrossDomainOwnable} from "src/interfaces/IScrollCrossDomainOwnabl
 /// or cross-chain (Ethereum / Ethereum goerli) EOA or contract
 /// @author Worldcoin
 /// @dev Can be executed by running `make mock`, `make local-mock`, `make deploy` or `make deploy-testnet`.
-contract LocalTransferOwnershipOfBaseWorldID is Script {
+contract LocalTransferOwnershipOfScrollWorldID is Script {
     uint256 public privateKey;
 
     address public scrollWorldIDAddress;
